@@ -1,6 +1,5 @@
 \# Auto Loan ETL Pipeline
-
-
+![etl](https://github.com/user-attachments/assets/69b8f9a0-283c-4b8f-9626-edb2e55efa29)
 
 \## Project Description
 
@@ -81,6 +80,7 @@ auto-loan-data-pipeline/
 9\. Process to Azure : python etl/main.py
 
 10\. Check Results : Verify generated CSVs in etl/data/ and check your Cloud Dashboards
+
 
 
 
