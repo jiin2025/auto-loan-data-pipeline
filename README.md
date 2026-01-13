@@ -10,17 +10,29 @@ It extracts data from CSV files, transforms it, and loads analytics-ready datase
 \## Project Structure
 auto-loan-data-pipeline/
  ├─ data/              # Source CSV files
+ 
  ├─ dags/
+ 
  │   └─ daily\_auto\_loan\_etl.py    # Airflow DAG definition \& schedule
+ 
  ├─ etl/               # Python ETL scripts
+ 
  │   ├─ main.py
+ 
  │   ├─ extract.py
+ 
  │   ├─ transform.py
+ 
  │   ├─ load.py
+ 
  │   ├─ s3\_ingestion.py
+ 
  │   ├─ check\_s3.py
+ 
  │   └─ output/            # Generated fact and dimension CSVs
+ 
  ├─ .env
+ 
  └─ README.md
 
 
@@ -45,6 +57,7 @@ auto-loan-data-pipeline/
 8\. Check generated CSVs in output/ folder
 9\. Process to Azure : python etl/main.py
 10\. Check Results : Verify generated CSVs in etl/data/ and check your Cloud Dashboards
+
 
 
 
