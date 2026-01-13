@@ -1,1 +1,87 @@
-import pandas as pd import boto3 import os from pathlib import Path from dotenv import load_dotenv from airflow.models import Variable from sqlalchemy import create_engine from azure_load import AzureDataLakeHandler # 1. 환경 변수 로드 (로컬 테스트용 .env 포함) load_dotenv(dotenv_path=Path(__file__).parent.parent / '.env') # 2. Configuration (Airflow Variables) TENANT_ID = Variable.get("AZURE_TENANT_ID", default_var=None) CLIENT_ID = Variable.get("AZURE_CLIENT_ID", default_var=None) CLIENT_SECRET = Variable.get("AZURE_CLIENT_SECRET", default_var=None) ACCOUNT_NAME = Variable.get("AZURE_ACCOUNT_NAME", default_var=None) CONTAINER_NAME = Variable.get("AZURE_CONTAINER_NAME", default_var=None) # 3. AWS Configuration (From .env) AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID") AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY") S3_BUCKET = os.getenv("S3_BUCKET_NAME") # Path settings BASE_DIR = Path("/opt/airflow/data") ETL_DIR = Path("/opt/airflow/etl/data") def run_etl(): """Integrated Pipeline: Local -> AWS S3 -> Azure -> PostgreSQL""" # --- [초기 설정 확인] --- if not TENANT_ID or not AWS_ACCESS_KEY: print("Error: Missing Azure or AWS credentials.") return # S3 Client & Azure Handler s3_client = boto3.client('s3', aws_access_key_id=AWS_ACCESS_KEY, aws_secret_access_key=AWS_SECRET_KEY) azure = AzureDataLakeHandler(TENANT_ID, CLIENT_ID, CLIENT_SECRET, ACCOUNT_NAME, CONTAINER_NAME) entities = ["customers", "loans", "payments"] for entity in entities: print(f"\n--- Processing {entity} ---") local_raw_path = BASE_DIR / f"{entity}.csv" # --- [STEP 1: AWS S3 Backup] --- # 원본을 AWS S3에 먼저 백업합니다. print(f"1. Backing up to AWS S3...") s3_client.upload_file(str(local_raw_path), S3_BUCKET, f"backup/{entity}.csv") # --- [STEP 2: Azure Raw Zone] --- # Azure 메달리온 아키텍처의 시작 (Raw) print(f"2. Uploading to Azure Raw Zone...") azure.upload_file(local_raw_path, f"raw/{entity}/{entity}.csv") # --- [STEP 3: Cleaning & Staging] --- # 데이터 정제 후 Azure Staging에 업로드 df = pd.read_csv(local_raw_path) df_cleaned = df.fillna(0) staging_path = ETL_DIR / "staging" / entity / f"{entity}.csv" staging_path.parent.mkdir(parents=True, exist_ok=True) df_cleaned.to_csv(staging_path, index=False) azure.upload_file(staging_path, f"staging/{entity}/{entity}.csv") print(f"3. Staging complete for {entity}.") # --- [STEP 4: Aggregation (Curated) & DB Load] --- # (여기서부터는 기존에 성공하신 요약 및 Postgres 적재 로직을 그대로 붙여넣으면 됩니다!) print("\n>> Starting Final Aggregation and PostgreSQL Load...") # ... (생략된 기존 요약 로직) ... print("ETL Pipeline Finished Successfully!") if __name__ == "__main__": run_etl()
+import pandas as pd
+import boto3
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+from airflow.models import Variable
+from sqlalchemy import create_engine, text
+from azure_load import AzureDataLakeHandler
+
+# Load Environment Variables
+load_dotenv(dotenv_path=Path(__file__).parent.parent / '.env')
+BASE_DIR = Path("/opt/airflow/data")
+ETL_DIR = Path("/opt/airflow/etl/data")
+
+# Cloud & DB Settings
+AZURE_CONF = {
+    "tenant_id": Variable.get("AZURE_TENANT_ID"),
+    "client_id": Variable.get("AZURE_CLIENT_ID"),
+    "client_secret": Variable.get("AZURE_CLIENT_SECRET"),
+    "account_name": Variable.get("AZURE_ACCOUNT_NAME"),
+    "container_name": Variable.get("AZURE_CONTAINER_NAME")
+}
+
+AWS_CONF = {
+    "access_key": os.getenv("AWS_ACCESS_KEY_ID"),
+    "secret_key": os.getenv("AWS_SECRET_ACCESS_KEY"),
+    "bucket": os.getenv("S3_BUCKET_NAME")
+}
+
+DB_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
+engine = create_engine(DB_URL)
+
+def run_etl():
+    # Initialize Clients
+    s3_client = boto3.client('s3', aws_access_key_id=AWS_CONF["access_key"], aws_secret_access_key=AWS_CONF["secret_key"])
+    azure = AzureDataLakeHandler(**AZURE_CONF)
+    
+    entities = ["customers", "loans", "payments"]
+
+    for entity in entities:
+        print(f"Processing: {entity}")
+        local_raw_path = BASE_DIR / f"{entity}.csv"
+
+        # Step 1: AWS S3 Backup
+        print(f"Step 1: AWS S3 upload")
+        s3_client.upload_file(str(local_raw_path), AWS_CONF["bucket"], f"backup/{entity}.csv")
+
+        # Step 2: Azure Bronze Layer (Raw)
+        print(f"Step 2: Azure Raw upload")
+        azure.upload_file(local_raw_path, f"raw/{entity}/{entity}.csv")
+
+        # Step 3: Data Cleaning & Silver Layer (Staging)
+        print(f"Step 3: Data cleaning and Azure Silver upload")
+        df = pd.read_csv(local_raw_path)
+        df_cleaned = df.fillna(0) # Fill missing values
+        
+        staging_path = ETL_DIR / "staging" / entity / f"{entity}.csv"
+        staging_path.parent.mkdir(parents=True, exist_ok=True)
+        df_cleaned.to_csv(staging_path, index=False)
+        azure.upload_file(staging_path, f"staging/{entity}/{entity}.csv")
+
+        # Step 4: Load to PostgreSQL
+        print(f"Step 4: Loading to PostgreSQL")
+        df_cleaned.to_sql(entity, engine, if_exists='replace', index=False)
+
+    # Step 5: Create Data Mart (Gold Layer)
+    print("Step 5: Creating Data Mart")
+    mart_sql = """
+    DROP TABLE IF EXISTS mart_auto_loan_summary;
+    CREATE TABLE mart_auto_loan_summary AS
+    SELECT 
+        c.customer_id,
+        COUNT(l.loan_id) AS total_loans,
+        SUM(p.payment_amount) AS total_payment_received,
+        MAX(l.loan_amount) AS max_loan_limit
+    FROM customers c
+    LEFT JOIN loans l ON c.customer_id = l.customer_id
+    LEFT JOIN payments p ON l.loan_id = p.loan_id
+    GROUP BY 1;
+    """
+    with engine.begin() as conn:
+        conn.execute(text(mart_sql))
+    
+    print("ETL Finished")
+
+if __name__ == "__main__":
+    run_etl()
