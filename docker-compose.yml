@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: alten-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: project
+    ports:
+      - "5433:5432"  # Host:Container
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data  # Persist PostgreSQL data
+
+  airflow:
+    image: apache/airflow:2.7.1
+    container_name: alten-airflow
+    depends_on:
+      - postgres
+    env_file:
+      - .env  # Load environment variables from .env file
+    environment:
+      # Ensure Docker recognizes Azure credentials from .env
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+      - AZURE_ACCOUNT_NAME=${AZURE_ACCOUNT_NAME}
+      - AZURE_CONTAINER_NAME=${AZURE_CONTAINER_NAME}
+
+      # Airflow core settings
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://postgres:1234@postgres:5432/project
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+
+      # Automatically install Python dependencies when container starts
+      - _PIP_ADDITIONAL_DEPENDENCIES=azure-storage-file-datalake,azure-identity,pandas,sqlalchemy,psycopg2-binary
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./data:/opt/airflow/data
+      - ./etl:/opt/airflow/etl
+      - ./output:/opt/airflow/output
+
+    ports:
+      - "8082:8080"  # Airflow webserver port
+    command: standalone
