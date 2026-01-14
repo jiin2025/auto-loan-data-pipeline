@@ -80,10 +80,4 @@ auto-loan-data-pipeline/
 
 10\. Check Results : Verify generated CSVs in etl/data/ and check your Cloud Dashboards
 
-
-
-
-
-
-
-
+<img width="1543" height="689" alt="image" src="https://github.com/user-attachments/assets/470e97b2-34c0-4445-86e5-cab779eefad8" />
