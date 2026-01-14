@@ -82,11 +82,13 @@ auto-loan-data-pipeline/
 
 <img width="532" height="347" alt="image" src="https://github.com/user-attachments/assets/69bc154d-60ef-4a2d-9e03-e82bf8fba468" />
 
-<img width="1543" height="689" alt="image" src="https://github.com/user-attachments/assets/470e97b2-34c0-4445-86e5-cab779eefad8" />
+<img width="1343" height="389" alt="image" src="https://github.com/user-attachments/assets/470e97b2-34c0-4445-86e5-cab779eefad8" />
 
 <img width="578" height="353" alt="image" src="https://github.com/user-attachments/assets/685f0005-d5cc-4109-b40e-0600c9ae8d0c" />
 
-<img width="1006" height="121" alt="image" src="https://github.com/user-attachments/assets/d383bcea-ad8b-4632-ba37-d56c4575e41f" />
+<img width="872" height="232" alt="image" src="https://github.com/user-attachments/assets/83dc1b1f-2dd7-40c1-85ca-3dbd787afc61" />
+
+
 
 
 
