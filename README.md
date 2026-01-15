@@ -81,13 +81,21 @@ auto-loan-data-pipeline/
 
 10\. Check Results : Verify generated CSVs in etl/data/ and check your Cloud Dashboards
 
+* Azure
+
 <img width="532" height="347" alt="image" src="https://github.com/user-attachments/assets/69bc154d-60ef-4a2d-9e03-e82bf8fba468" />
 
+* S3
 <img width="1343" height="389" alt="image" src="https://github.com/user-attachments/assets/470e97b2-34c0-4445-86e5-cab779eefad8" />
+
+* S3 
 
 <img width="578" height="353" alt="image" src="https://github.com/user-attachments/assets/685f0005-d5cc-4109-b40e-0600c9ae8d0c" />
 
+* Docker
+  
 <img width="872" height="232" alt="image" src="https://github.com/user-attachments/assets/83dc1b1f-2dd7-40c1-85ca-3dbd787afc61" />
+
 
 
 
