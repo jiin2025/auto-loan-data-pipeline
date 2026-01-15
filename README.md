@@ -13,6 +13,7 @@ It extracts data from CSV files, transforms it, and loads analytics-ready datase
 
 \## Project Structure
 auto-loan-data-pipeline/
+
  ├─ data/              # Source CSV files
  
  ├─ dags/
@@ -87,6 +88,7 @@ auto-loan-data-pipeline/
 <img width="578" height="353" alt="image" src="https://github.com/user-attachments/assets/685f0005-d5cc-4109-b40e-0600c9ae8d0c" />
 
 <img width="872" height="232" alt="image" src="https://github.com/user-attachments/assets/83dc1b1f-2dd7-40c1-85ca-3dbd787afc61" />
+
 
 
 
